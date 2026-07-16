@@ -75,7 +75,7 @@ const shops = [
       '👉 다이어트 하고 싶으신 분 ✋',
       '밀착관리! 될때까지 재밌게 자세히 알려드려요.'
     ],
-    images: ['/shop-dive-1.jpg', '/shop-dive-2.jpg', '/shop-dive-3.jpg', '/shop-dive-4.jpg']
+    images: ['/shop-dive-1.jpg', '/shop-dive-2.jpg']
   },
   {
     slug: '라임제이',
@@ -123,9 +123,9 @@ export default function Home() {
   const [activeSlug, setActiveSlug] = useState('소이연남');
   const [isMobile, setIsMobile] = useState(false);
   
-  // 스와이프를 위한 터치 좌표 상태 저장
-  const [touchStartPos, setTouchStartPos] = useState({ x: null, y: null });
-  const [touchEndPos, setTouchEndPos] = useState({ x: null, y: null });
+  // 에러 해결: TypeScript에게 이 변수들은 숫자(number) 또는 빈 값(null)을 가질 수 있다고 알려줍니다.
+  const [touchStartPos, setTouchStartPos] = useState<{ x: number | null, y: number | null }>({ x: null, y: null });
+  const [touchEndPos, setTouchEndPos] = useState<{ x: number | null, y: number | null }>({ x: null, y: null });
 
   const activeShop = shops.find(shop => shop.slug === activeSlug) || shops[0];
 
@@ -134,7 +134,6 @@ export default function Home() {
     setIsMobile(isMobileDevice);
   }, []);
 
-  // 전화번호 및 링크 파싱 함수
   const renderContent = (text: string) => {
     const splitRegex = /(0\d{1,2}-?\d{3,4}-?\d{4}|https?:\/\/[^\s]+)/g;
     if (!splitRegex.test(text)) return <span>{text}</span>;
@@ -166,18 +165,18 @@ export default function Home() {
     );
   };
 
-  // --- 스와이프 로직 추가 ---
-  const minSwipeDistance = 50; // 인식할 최소 드래그 거리(px)
+  const minSwipeDistance = 50;
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEndPos({ x: null, y: null }); // 초기화
+  // 에러 해결: 터치 이벤트의 타입을 명확하게 지정합니다.
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    setTouchEndPos({ x: null, y: null });
     setTouchStartPos({
       x: e.targetTouches[0].clientX,
       y: e.targetTouches[0].clientY
     });
   };
 
-  const onTouchMove = (e: React.TouchEvent) => {
+  const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     setTouchEndPos({
       x: e.targetTouches[0].clientX,
       y: e.targetTouches[0].clientY
@@ -185,22 +184,19 @@ export default function Home() {
   };
 
   const onTouchEnd = () => {
-    if (!touchStartPos.x || !touchEndPos.x) return;
+    if (!touchStartPos.x || !touchEndPos.x || !touchStartPos.y || !touchEndPos.y) return;
 
     const distanceX = touchStartPos.x - touchEndPos.x;
-    const distanceY = touchStartPos.y - touchEndPos.y; // 위아래 스크롤 감지용
+    const distanceY = touchStartPos.y - touchEndPos.y;
     const isLeftSwipe = distanceX > minSwipeDistance;
     const isRightSwipe = distanceX < -minSwipeDistance;
 
-    // 위아래(스크롤)보다 좌우로(스와이프) 더 많이 움직였을 때만 탭 전환
     if (Math.abs(distanceX) > Math.abs(distanceY)) {
       const currentIndex = shops.findIndex(shop => shop.slug === activeSlug);
       if (isLeftSwipe) {
-        // 왼쪽으로 밀면 다음 상점 (끝이면 처음으로)
         const nextIndex = (currentIndex + 1) % shops.length;
         setActiveSlug(shops[nextIndex].slug);
       } else if (isRightSwipe) {
-        // 오른쪽으로 밀면 이전 상점 (처음이면 끝으로)
         const prevIndex = (currentIndex - 1 + shops.length) % shops.length;
         setActiveSlug(shops[prevIndex].slug);
       }
@@ -219,7 +215,6 @@ export default function Home() {
         </p>
       </header>
 
-      {/* 상단 네비게이션 버튼들 */}
       <div className="max-w-md mx-auto mb-6 flex flex-wrap justify-center gap-2 px-1">
         {shops.map((shop) => (
           <button
@@ -236,7 +231,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* 스와이프 이벤트를 감지하는 메인 콘텐츠 영역 */}
       <div 
         className="max-w-md mx-auto fade-in" 
         key={activeSlug}
