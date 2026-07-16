@@ -86,7 +86,7 @@ const shops = [
     benefit: '상담후 전체견적에서 최대10% 할인',
     condition: '유준 010-3005-4819',
     details: [
-      '링크: https://www.instagram.com/lime.j_photography/profilecard/?igsh=NXF0NnVpZHc2d28='
+      'https://www.instagram.com/lime.j_photography/profilecard/?igsh=NXF0NnVpZHc2d28='
     ],
     images: ['/shop-lime.jpg']
   },
@@ -110,7 +110,7 @@ const shops = [
     name: '📑 미나리🎀 이민아 팀장 / 한화피플라이프 보험클리닉',
     address: '수원시 팔달구 경수대로 420, 마라톤빌딩 501호',
     benefit: '✨전문 분석!✨ 기존 보험 무료분석해드립니다.',
-    condition: 'MOBILE 010.3280.8585',
+    condition: 'MOBILE 010-3280-8585',
     details: [
       '보험은 없는사람 없겠죠~~ 정확한 설계를 통해 부족한건 채우고 불필요한건 줄이고 보장은 더 짱짱하게!',
       '예전 보험들이 좋은것도 있지만 현재 질병에 해당되지 않는 보험도 많아요~~',
@@ -126,46 +126,37 @@ export default function Home() {
   const activeShop = shops.find(shop => shop.slug === activeSlug) || shops[0];
 
   useEffect(() => {
-    // 사용자가 모바일 기기인지 체크
-    const checkMobile = () => {
-      const userAgent = typeof window.navigator === "undefined" ? "" : navigator.userAgent;
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-      setIsMobile(isMobileDevice);
-    };
-    checkMobile();
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    setIsMobile(isMobileDevice);
   }, []);
 
-  const renderWithLinksAndPhone = (text: string) => {
-    // URL과 전화번호(010-XXXX-XXXX 형태)를 찾는 정규식
-    const phoneRegex = /(01[016789]-?\d{3,4}-?\d{4})/g;
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const combinedRegex = new RegExp(`(${phoneRegex.source}|${urlRegex.source})`, 'g');
+  const renderContent = (text: string) => {
+    // 010-XXXX-XXXX 형태의 전화번호와 URL을 매칭
+    const regex = /(01[016789]-?\d{3,4}-?\d{4})|(https?:\/\/[^\s]+)/g;
+    
+    if (!regex.test(text)) return <span>{text}</span>;
 
-    return text.split(combinedRegex).map((part, index) => {
-      if (!part) return null;
-      
-      // 전화번호인 경우
-      if (part.match(phoneRegex)) {
-        if (isMobile) {
-          return (
-            <a key={index} href={`tel:${part.replace(/-/g, '')}`} className="text-blue-600 font-bold underline">
-              {part}
-            </a>
-          );
-        }
-        return <span key={index} className="font-semibold text-gray-800">{part}</span>;
-      }
-
-      // URL인 경우
-      if (part.match(urlRegex)) {
-        return (
-          <a key={index} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-semibold break-all">
-            {part}
-          </a>
-        );
-      }
-      return part;
-    });
+    const parts = text.split(regex);
+    return (
+      <span>
+        {parts.map((part, i) => {
+          if (!part) return null;
+          // 전화번호 링크
+          if (/01[016789]-?\d{3,4}-?\d{4}/.test(part)) {
+            return isMobile ? (
+              <a key={i} href={`tel:${part.replace(/-/g, '')}`} className="text-blue-600 font-bold underline">{part}</a>
+            ) : <span key={i} className="font-semibold text-gray-800">{part}</span>;
+          }
+          // URL 링크
+          if (/https?:\/\/[^\s]+/.test(part)) {
+            return (
+              <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-semibold break-all">{part}</a>
+            );
+          }
+          return <span key={i}>{part}</span>;
+        })}
+      </span>
+    );
   };
 
   return (
@@ -202,21 +193,17 @@ export default function Home() {
           <p className="text-gray-500 mt-1.5" style={{ fontSize: 'clamp(0.875rem, 2vw, 0.95rem)' }}>{activeShop.address}</p>
           
           <div className="mt-5 bg-blue-50 border border-blue-100 text-blue-800 p-4 rounded-xl text-left">
-            <span className="font-bold block mb-1" style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)' }}>
-              {renderWithLinksAndPhone(activeShop.benefit)}
-            </span>
+            <span className="font-bold block mb-1" style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)' }}>{renderContent(activeShop.benefit)}</span>
             {activeShop.condition && (
               <span className="block text-sm font-medium opacity-80 mt-2">
-                💡 {renderWithLinksAndPhone(activeShop.condition)}
+                💡 {renderContent(activeShop.condition)}
               </span>
             )}
           </div>
           
           <div className="mt-5 text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-xl flex flex-col gap-2" style={{ fontSize: 'clamp(0.875rem, 2vw, 0.95rem)' }}>
             {activeShop.details.map((detail, idx) => (
-              <span key={idx} className="block">
-                {renderWithLinksAndPhone(detail)}
-              </span>
+              <span key={idx} className="block">{renderContent(detail)}</span>
             ))}
           </div>
 
@@ -240,14 +227,6 @@ export default function Home() {
           </div>
         </section>
       </div>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes fadeIn { 
-          from { opacity: 0; transform: translateY(10px); } 
-          to { opacity: 1; transform: translateY(0); } 
-        }
-      `}} />
     </main>
   );
 }
