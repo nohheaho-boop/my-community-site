@@ -75,7 +75,7 @@ const shops = [
       '👉 다이어트 하고 싶으신 분 ✋',
       '밀착관리! 될때까지 재밌게 자세히 알려드려요.'
     ],
-    images: ['/shop-dive-1.jpg', '/shop-dive-2.jpg']
+    images: ['/shop-dive-1.jpg', '/shop-dive-2.jpg','/shop-dive-3.jpg', '/shop-dive-4.jpg']
   },
   {
     slug: '라임제이',
