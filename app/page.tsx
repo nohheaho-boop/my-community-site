@@ -42,7 +42,7 @@ const shops = [
       '• 네일아트 ▶ 첫방문 29,000~',
       '• 속눈썹 ▶ 첫방문 30,000~'
     ],
-    images: ['/shop-beauty-1.jpg', '/shop-beauty-2.jpg', '/shop-beauty-3.jpg', '/shop-beauty-4.jpg']
+    images: ['/shop-beauty-1.jpg', '/shop-beauty-2.jpg', '/shop-beauty-3.jpg', '/shop-beauty-4.jpg', '/shop-beauty-5.jpg', '/shop-beauty-6.jpg', '/shop-beauty-7.jpg', '/shop-beauty-8.jpg', '/shop-beauty-9.jpg', '/shop-beauty-10.jpg', '/shop-beauty-11.jpg', '/shop-beauty-12.jpg']
   },
   {
     slug: '사주분석',
@@ -55,8 +55,7 @@ const shops = [
       '눈에 보이는 것이 아니라 \'보이지 않는 어떤것\'에 영향을 미쳐 자신만의 권력과 가치를 만들어 내는 사람!!!',
       '누구나 마음만 먹으면 꼭 필요한 사람 "린치핀"이 될 수 있습니다.',
       '기질분석을 통하여 본인만의 린치핀을 확인해 보세요~!'
-    ],
-    images: ['/shop-saju.jpg']
+    ]
   },
   {
     slug: '프리다이빙',
@@ -76,7 +75,7 @@ const shops = [
       '👉 다이어트 하고 싶으신 분 ✋',
       '밀착관리! 될때까지 재밌게 자세히 알려드려요.'
     ],
-    images: ['/shop-dive-1.jpg', '/shop-dive-2.jpg']
+    images: ['/shop-dive-1.jpg', '/shop-dive-2.jpg', '/shop-dive-3.jpg', '/shop-dive-4.jpg']
   },
   {
     slug: '라임제이',
@@ -123,6 +122,11 @@ const shops = [
 export default function Home() {
   const [activeSlug, setActiveSlug] = useState('소이연남');
   const [isMobile, setIsMobile] = useState(false);
+  
+  // 스와이프를 위한 터치 좌표 상태 저장
+  const [touchStartPos, setTouchStartPos] = useState({ x: null, y: null });
+  const [touchEndPos, setTouchEndPos] = useState({ x: null, y: null });
+
   const activeShop = shops.find(shop => shop.slug === activeSlug) || shops[0];
 
   useEffect(() => {
@@ -130,27 +134,30 @@ export default function Home() {
     setIsMobile(isMobileDevice);
   }, []);
 
+  // 전화번호 및 링크 파싱 함수
   const renderContent = (text: string) => {
-    // 010-XXXX-XXXX 형태의 전화번호와 URL을 매칭
-    const regex = /(01[016789]-?\d{3,4}-?\d{4})|(https?:\/\/[^\s]+)/g;
-    
-    if (!regex.test(text)) return <span>{text}</span>;
+    const splitRegex = /(0\d{1,2}-?\d{3,4}-?\d{4}|https?:\/\/[^\s]+)/g;
+    if (!splitRegex.test(text)) return <span>{text}</span>;
 
-    const parts = text.split(regex);
+    const parts = text.split(splitRegex);
     return (
       <span>
         {parts.map((part, i) => {
           if (!part) return null;
-          // 전화번호 링크
-          if (/01[016789]-?\d{3,4}-?\d{4}/.test(part)) {
+          if (/^0\d{1,2}-?\d{3,4}-?\d{4}$/.test(part)) {
             return isMobile ? (
-              <a key={i} href={`tel:${part.replace(/-/g, '')}`} className="text-blue-600 font-bold underline">{part}</a>
-            ) : <span key={i} className="font-semibold text-gray-800">{part}</span>;
+              <a key={i} href={`tel:${part.replace(/-/g, '')}`} className="text-sky-600 font-bold underline decoration-sky-300 underline-offset-2">
+                {part}
+              </a>
+            ) : (
+              <span key={i} className="font-semibold text-gray-800">{part}</span>
+            );
           }
-          // URL 링크
-          if (/https?:\/\/[^\s]+/.test(part)) {
+          if (/^https?:\/\/[^\s]+$/.test(part)) {
             return (
-              <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-semibold break-all">{part}</a>
+              <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-sky-600 font-semibold underline decoration-sky-300 underline-offset-2 break-all">
+                {part}
+              </a>
             );
           }
           return <span key={i}>{part}</span>;
@@ -159,11 +166,52 @@ export default function Home() {
     );
   };
 
+  // --- 스와이프 로직 추가 ---
+  const minSwipeDistance = 50; // 인식할 최소 드래그 거리(px)
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEndPos({ x: null, y: null }); // 초기화
+    setTouchStartPos({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEndPos({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStartPos.x || !touchEndPos.x) return;
+
+    const distanceX = touchStartPos.x - touchEndPos.x;
+    const distanceY = touchStartPos.y - touchEndPos.y; // 위아래 스크롤 감지용
+    const isLeftSwipe = distanceX > minSwipeDistance;
+    const isRightSwipe = distanceX < -minSwipeDistance;
+
+    // 위아래(스크롤)보다 좌우로(스와이프) 더 많이 움직였을 때만 탭 전환
+    if (Math.abs(distanceX) > Math.abs(distanceY)) {
+      const currentIndex = shops.findIndex(shop => shop.slug === activeSlug);
+      if (isLeftSwipe) {
+        // 왼쪽으로 밀면 다음 상점 (끝이면 처음으로)
+        const nextIndex = (currentIndex + 1) % shops.length;
+        setActiveSlug(shops[nextIndex].slug);
+      } else if (isRightSwipe) {
+        // 오른쪽으로 밀면 이전 상점 (처음이면 끝으로)
+        const prevIndex = (currentIndex - 1 + shops.length) % shops.length;
+        setActiveSlug(shops[prevIndex].slug);
+      }
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-gray-50 p-4 md:p-6 pb-20">
+    <main className="min-h-screen bg-sky-50/40 p-4 md:p-6 pb-20">
       <header className="mb-6 text-center pt-8">
         <h1 className="font-bold text-gray-900" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>
-          <span className="text-blue-600">[동탄2] 호수공원 친목 걷기모임</span><br/>
+          <span className="text-sky-600">[동탄2] 호수공원 친목 걷기모임</span><br/>
           회원 전용 제휴 상점
         </h1>
         <p className="text-gray-500 mt-3" style={{ fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>
@@ -171,6 +219,7 @@ export default function Home() {
         </p>
       </header>
 
+      {/* 상단 네비게이션 버튼들 */}
       <div className="max-w-md mx-auto mb-6 flex flex-wrap justify-center gap-2 px-1">
         {shops.map((shop) => (
           <button
@@ -178,8 +227,8 @@ export default function Home() {
             onClick={() => setActiveSlug(shop.slug)}
             className={`whitespace-nowrap px-4 py-2 rounded-full font-semibold transition-colors text-sm ${
               activeSlug === shop.slug
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'
+                ? 'bg-sky-400 text-white shadow-sm'
+                : 'bg-white text-gray-600 border border-sky-100 hover:bg-sky-50'
             }`}
           >
             {shop.tabLabel}
@@ -187,13 +236,22 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="max-w-md mx-auto fade-in" key={activeSlug}>
-        <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* 스와이프 이벤트를 감지하는 메인 콘텐츠 영역 */}
+      <div 
+        className="max-w-md mx-auto fade-in" 
+        key={activeSlug}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <section className="bg-white p-6 rounded-2xl shadow-sm border border-sky-100 overflow-hidden">
           <h2 className="font-bold text-gray-900" style={{ fontSize: 'clamp(1.125rem, 3vw, 1.5rem)' }}>{activeShop.name}</h2>
           <p className="text-gray-500 mt-1.5" style={{ fontSize: 'clamp(0.875rem, 2vw, 0.95rem)' }}>{activeShop.address}</p>
           
-          <div className="mt-5 bg-blue-50 border border-blue-100 text-blue-800 p-4 rounded-xl text-left">
-            <span className="font-bold block mb-1" style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)' }}>{renderContent(activeShop.benefit)}</span>
+          <div className="mt-5 bg-sky-50/70 border border-sky-100 text-sky-900 p-4 rounded-xl text-left">
+            <span className="font-bold block mb-1" style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)' }}>
+              {renderContent(activeShop.benefit)}
+            </span>
             {activeShop.condition && (
               <span className="block text-sm font-medium opacity-80 mt-2">
                 💡 {renderContent(activeShop.condition)}
@@ -201,7 +259,7 @@ export default function Home() {
             )}
           </div>
           
-          <div className="mt-5 text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-xl flex flex-col gap-2" style={{ fontSize: 'clamp(0.875rem, 2vw, 0.95rem)' }}>
+          <div className="mt-5 text-gray-700 leading-relaxed bg-sky-50/30 p-4 rounded-xl flex flex-col gap-2 border border-sky-50/50" style={{ fontSize: 'clamp(0.875rem, 2vw, 0.95rem)' }}>
             {activeShop.details.map((detail, idx) => (
               <span key={idx} className="block">{renderContent(detail)}</span>
             ))}
@@ -210,7 +268,7 @@ export default function Home() {
           <div className="mt-6 flex flex-col gap-3">
             {activeShop.images && activeShop.images.length > 0 ? (
               activeShop.images.map((imgSrc, index) => (
-                <div key={index} className="w-full relative rounded-xl overflow-hidden bg-gray-100 border border-gray-100">
+                <div key={index} className="w-full relative rounded-xl overflow-hidden bg-sky-50/50 border border-sky-100/50">
                   <img 
                     src={imgSrc} 
                     alt={`${activeShop.name} 상세 이미지 ${index + 1}`} 
@@ -220,13 +278,21 @@ export default function Home() {
                 </div>
               ))
             ) : (
-              <div className="w-full h-32 flex items-center justify-center bg-gray-100 rounded-xl text-gray-400">
+              <div className="w-full h-32 flex items-center justify-center bg-sky-50/50 rounded-xl text-sky-400 font-medium border border-sky-100/50">
                 이미지 준비 중
               </div>
             )}
           </div>
         </section>
       </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes fadeIn { 
+          from { opacity: 0; transform: translateY(8px); } 
+          to { opacity: 1; transform: translateY(0); } 
+        }
+      `}} />
     </main>
   );
 }
